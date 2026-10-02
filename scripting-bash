@@ -1,0 +1,24 @@
+#!/bin/bash
+# Description: Script d'audit de répertoire et de vérification d'espace disque
+
+DIR_TARGET="$1"
+LOG_FILE="/var/log/disk_alert.log"
+
+# 1. Vérification de l'argument passé en paramètre
+if [ -z "$DIR_TARGET" ] || [ ! -d "$DIR_TARGET" ]; then
+    echo "Usage: $0 <chemin_du_repertoire>"
+    exit 1
+fi
+
+echo "--- Les 5 plus gros fichiers dans $DIR_TARGET ---"
+find "$DIR_TARGET" -type f -exec du -h {} + 2>/dev/null | sort -rh | head -n 5
+
+# 2. Vérification de l'espace disque de la racine /
+# Récupération du pourcentage d'espace LIBRE sur /
+FREE_PERCENT=$(df / | awk 'NR==2 {print 100 - $5}')
+
+# 3. Alerte si l'espace libre est < 20% (soit un espace utilisé > 80%)
+if [ "$FREE_PERCENT" -lt 20 ]; then
+    ALERT_MSG="$(date '+%Y-%m-%d %H:%M:%S') - ALERTE: Espace libre sur / critique ! Il reste ${FREE_PERCENT}% de disponible."
+    echo "$ALERT_MSG" >> "$LOG_FILE"
+fi
